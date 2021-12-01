@@ -1,11 +1,19 @@
 const std = @import("std");
 
-const days =  [_]u8{
-    1,
-    2
+const days =  comptime ret: {
+    const dayCount = 1;
+    var vals: [dayCount]u8 = undefined;
+    for (vals) |_, n| {
+        vals[n] = n + 1;
+    }
+    break :ret vals;
 };
 
-pub fn build(b: *std.build.Builder) void {
+fn intToString(comptime int: u32, comptime buf: []u8) ![]const u8 {
+    return try std.fmt.bufPrint(buf, "{}", .{int});
+}
+
+pub fn build(b: *std.build.Builder) !void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -16,32 +24,27 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
-    // for (days) |day| {
-    //     const buf: [20]u8 = undefined;
-    //     const dayName: []u8 = try std.fmt.bufPrint(&buf, "day{}", .{day});
-    //     const exe = b.addExecutable(dayName, "src/" + dayName + "/main.zig");
-    //     exe.setTarget(target);
-    //     exe.setBuildMode(mode);
-    //     exe.install();
+    inline for (days) |day| {
+        var buff: [128]u8 = undefined;
 
-    //     const run_cmd = exe.run();
-    //     run_cmd.addArgs("inputs/" + dayName);
+        const dayName = comptime blk: {
+            var nameBuffer: [8]u8 = undefined;
+            break :blk "day" ++ try intToString(day, &nameBuffer);
+        };
+        const src = try std.fmt.bufPrint(buff[0..], "src/day{}/main.zig", .{day});
 
-    //     const step = b.step(dayName, "Build and run " + dayName);
-    //     step.dependOn(&run_cmd.step);
-    // }
+        const exe = b.addExecutable(dayName, src);
+        exe.setTarget(target);
+        exe.setBuildMode(mode);
+        exe.install();
 
-    const exe = b.addExecutable("aoc1", "src/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.install();
+        const run_cmd = exe.run();
+        run_cmd.step.dependOn(b.getInstallStep());
+        const arg = try std.fmt.bufPrint(&buff, "input/day{}", .{day});
+        run_cmd.addArg(arg);
 
-    const run_cmd = exe.run();
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
+        const desc = try std.fmt.bufPrint(&buff, "Build and run day {}", .{day});
+        const step = b.step(dayName, desc);
+        step.dependOn(&run_cmd.step);
     }
-
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
 }

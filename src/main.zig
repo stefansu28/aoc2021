@@ -13,5 +13,5 @@ pub fn main() anyerror!void {
         last = sum;
         n += 1;
     }
-    print("incs: {}", .{inc});
+    print("incs: {}\n", .{inc});
 }
