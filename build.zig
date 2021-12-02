@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const days =  comptime ret: {
-    const dayCount = 1;
+    const dayCount = 2;
     var vals: [dayCount]u8 = undefined;
     for (vals) |_, n| {
         vals[n] = n + 1;
@@ -40,7 +40,9 @@ pub fn build(b: *std.build.Builder) !void {
 
         const run_cmd = exe.run();
         run_cmd.step.dependOn(b.getInstallStep());
-        const arg = try std.fmt.bufPrint(&buff, "input/day{}", .{day});
+        var cwdBuff: [128]u8 = undefined;
+        const cwd = try std.os.getcwd(cwdBuff[0..]);
+        const arg = try std.fmt.bufPrint(&buff, "{s}/input/day{}", .{cwd, day});
         run_cmd.addArg(arg);
 
         const desc = try std.fmt.bufPrint(&buff, "Build and run day {}", .{day});
