@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const days =  comptime ret: {
-    const dayCount = 2;
+    const dayCount = 3;
     var vals: [dayCount]u8 = undefined;
     for (vals) |_, n| {
         vals[n] = n + 1;

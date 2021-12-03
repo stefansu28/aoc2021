@@ -14,7 +14,6 @@ pub fn main() anyerror!void {
         .read = true
     };
     const filename = std.mem.spanZ(std.os.argv[1]);
-    print("filename: {s}\n", .{filename});
     const input = try std.fs.openFileAbsolute(filename, flags);
     defer input.close();
     const reader = input.reader();
@@ -24,12 +23,11 @@ pub fn main() anyerror!void {
     var aim: u64 = 0;
 
     var buffer: [100]u8 = undefined;
-    var n: u8 = 0;
     while (reader.readUntilDelimiterOrEof(buffer[0..], '\n')) |lineOption| {
         if (lineOption) |line| {
             const dir = getWord(line);
             const amount = try std.fmt.parseInt(u8, getWord(line[dir.len+1..]), 10);
-            print("dir: {s}, amount: {}\n", .{dir, amount});
+            // print("dir: {s}, amount: {}\n", .{dir, amount});
             if (std.mem.eql(u8, dir, "forward")) {
                 horizontal += amount;
                 depth += aim*amount;
