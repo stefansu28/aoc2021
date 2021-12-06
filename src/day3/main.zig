@@ -43,15 +43,41 @@ fn part1(reader: std.fs.File.Reader) u32 {
     return gamma * epsilon;
 }
 
+const lexCmp16 = comptime lexCmp(u16);
+
 fn binarySearch(values: []u16, value: u16, offset: usize) usize {
-    if (values.len == 1) return offset;
+    if (values.len == 1 or values[0] == value) return offset;
     const middle = values.len / 2;
-    print("middle value: {}, search value: {}\n", .{values[middle], value});
-    if (values[middle] > value) {
+    print("middle: {}\n", .{middle});
+    print("middle value: {b:0>12}, search value: {b:0>12}, lessThan: {}\n", .{values[middle], value, lexCmp16({}, values[middle], value)});
+    if (lexCmp16({}, values[middle], value) and (middle + 1 == values.len or lexCmp16({}, value, values[middle + 1]))) {
+        return offset + middle;
+    }
+    if (lexCmp16({}, value, values[middle])) {
         return binarySearch(values[0..middle], value, offset);
     } else {
         return binarySearch(values[middle..], value, offset + middle);
     }
+}
+
+fn lexCmp(comptime T: type) fn (void, T, T) bool {
+    const impl = struct {
+        fn inner(context: void, a: T, b: T) bool {
+            var current_bit: u16 = 1 << 11;
+            while (current_bit > 0) {
+                const aBit: u8 = if (current_bit & a != 0) 1 else 0;
+                const bBit: u8 = if (current_bit & b != 0) 1 else 0;
+                if (aBit != bBit) {
+                    return aBit < bBit;
+                }
+                current_bit >>= 1;
+            }
+
+            return false;
+        }
+    };
+
+    return impl.inner;
 }
 
 fn part2(reader: std.fs.File.Reader) anyerror!u32 {
@@ -73,27 +99,64 @@ fn part2(reader: std.fs.File.Reader) anyerror!u32 {
         unreachable;
     }
 
-    // std.sort.sort(u16, values, {}, comptime std.sort.asc(u16));
+    std.sort.sort(u16, values, {}, comptime lexCmp(u16));
 
     var current_values = values[0..lineCount];
-    var current_bit: u16 = 1 << 12;
+    var current_bit: u16 = blk: {
+        const value = values[lineCount-1];
+        var bit: u16 = 1 << 15;
+        while (value & bit == 0) {
+            bit >>= 1;
+        }
+        break :blk bit;
+    };
+    print("current bit: {b}\n", .{current_bit});
+    var mask: u16 = 0;
+
+    for (current_values) |value, index| {
+        print("index: {: >4}, val: {b:0>12}\n", .{index, value});
+    }
+
+    var it: u8 = 0;
 
     while (current_values.len > 1) {
-        // print("current len: {}\n", .{current_values.len});
-        // const middle = current_values.len / 2;
-        // const cutoff = binarySearch(current_values, current_bit, 0);
-        // print("middle: {}, cutoff: {}\n", .{middle, cutoff});
-        // if (cutoff > middle) {
-        //     current_values = current_values[0..cutoff];
-        // } else {
-        //     current_values = current_values[cutoff..];
-        // }
+        print("current len: {}\n", .{current_values.len});
+        const middle = current_values.len / 2;
+        const cutoff = binarySearch(current_values, mask | current_bit - 1, 0);
+        print("middle: {}, cutoff: {}\n", .{middle, cutoff});
+        if (cutoff > middle) {
+            current_values = current_values[0..cutoff];
+        } else {
+            current_values = current_values[cutoff+1..];
+        }
+        mask |= current_values[0] & current_bit;
         current_bit >>= 1;
-        // break;
     }
-    print("oxygen: {}\n", .{current_values[0]});
 
-    return 0;
+    const oxygen: u32 = current_values[0];
+
+    current_values = values[0..lineCount];
+    current_bit = 1 << 11;
+    mask = 0;
+
+    while (current_values.len > 1) {
+        print("current len: {}\n", .{current_values.len});
+        const middle = current_values.len / 2;
+        const cutoff = binarySearch(current_values, mask | current_bit - 1, 0);
+        print("middle: {}, cutoff: {}\n", .{middle, cutoff});
+        if (cutoff < middle) {
+            current_values = current_values[0..cutoff];
+        } else {
+            current_values = current_values[cutoff..];
+        }
+        mask |= current_values[0] & current_bit;
+        current_bit >>= 1;
+    }
+
+    const co2: u32 = current_values[0];
+    print("oxygen: {}, CO2 {}\n", .{oxygen, co2});
+
+    return oxygen * co2;
 }
 
 pub fn main() anyerror!void {
