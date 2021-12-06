@@ -40,10 +40,14 @@ pub fn build(b: *std.build.Builder) !void {
 
         const run_cmd = exe.run();
         run_cmd.step.dependOn(b.getInstallStep());
-        var cwdBuff: [128]u8 = undefined;
-        const cwd = try std.os.getcwd(cwdBuff[0..]);
-        const arg = try std.fmt.bufPrint(&buff, "{s}/input/day{}", .{cwd, day});
-        run_cmd.addArg(arg);
+        if (b.args) |args| {
+            run_cmd.addArgs(args);
+        } else {
+            var cwdBuff: [128]u8 = undefined;
+            const cwd = try std.os.getcwd(cwdBuff[0..]);
+            const arg = try std.fmt.bufPrint(&buff, "{s}/input/day{}", .{cwd, day});
+            run_cmd.addArg(arg);
+        }
 
         const desc = try std.fmt.bufPrint(&buff, "Build and run day {}", .{day});
         const step = b.step(dayName, desc);
