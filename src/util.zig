@@ -16,3 +16,11 @@ pub fn getWord(str: []u8) []u8 {
     }
     return str[0..];
 }
+
+/// Given a string returns a new string without the leading whitespace
+pub fn eatWhitespace(str: []u8) []u8 {
+    for (str) |c, n| {
+        if (c != ' ' and c != '\n') return str[n..];
+    }
+    return str[0..];
+}

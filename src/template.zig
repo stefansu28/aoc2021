@@ -2,7 +2,7 @@ const std = @import("std");
 const util = @import("util");
 const print = std.debug.print;
 
-fn part1(reader: std.fs.File.Reader) u32 {
+fn part1(reader: std.fs.File.Reader) anyerror!u32 {
     return 0;
 }
 
