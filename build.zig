@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const days =  comptime ret: {
-    const dayCount = 3;
+    const dayCount = 4;
     var vals: [dayCount]u8 = undefined;
     for (vals) |_, n| {
         vals[n] = n + 1;
@@ -36,6 +36,7 @@ pub fn build(b: *std.build.Builder) !void {
         const exe = b.addExecutable(dayName, src);
         exe.setTarget(target);
         exe.setBuildMode(mode);
+        exe.addPackagePath("util", "src/util.zig");
         exe.install();
 
         const run_cmd = exe.run();

@@ -1,14 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
 
-fn getWord(str: []u8) []u8 {
-    for (str) |c, n| {
-        if (c == ' ') return str[0..n];
-    }
-
-    return str[0..];
-}
-
 fn part1(reader: std.fs.File.Reader) u32 {
     var gamma: u32 = 0;
     var epsilon: u32 = 0;
