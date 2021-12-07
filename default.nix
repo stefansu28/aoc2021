@@ -10,9 +10,9 @@ let
   };
   # need version 0.8.1
   zig = (import zig-overlay { inherit pkgs system; })."0.8.1";
-  buildInputs = [ zig pkgs.SDL2 ];
+  buildInputs = [ zig ];
 in pkgs.stdenv.mkDerivation {
-  name = "zarzara-env";
+  name = "aoc-env";
   buildInputs = buildInputs;
   LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
 }
