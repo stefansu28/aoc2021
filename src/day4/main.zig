@@ -2,10 +2,18 @@ const std = @import("std");
 const util = @import("util");
 const print = std.debug.print;
 
+const Pair = struct {
+    row: u8,
+    col: u8
+};
+
+const BoardEntry = struct {
+    value: u8,
+    marked: bool = false
+};
+
 const BingoBoard = struct {
-    data: [5][5]u8 = undefined,
-    columnCounts: [5]u8 = []u8{0, 0, 0, 0, 0},
-    rowCounts: [5]u8 = []u8{0, 0, 0, 0, 0},
+    data: [5][5]BoardEntry = undefined,
 
     fn parseBoard(reader: std.fs.File.Reader) anyerror!BingoBoard {
         var board = BingoBoard{};
@@ -17,7 +25,8 @@ const BingoBoard = struct {
             while (col < 5): (col += 1) {
                 line = util.eatWhitespace(line);
                 const intString = util.getWord(line);
-                board.data[row][col] = try std.fmt.parseInt(u8, intString, 10);
+                const num = try std.fmt.parseInt(u8, intString, 10);
+                board.data[row][col] = BoardEntry{.value = num};
                 line = line[intString.len..];
             }
         }
@@ -25,11 +34,12 @@ const BingoBoard = struct {
         return board;
     }
 
-    fn findNumer(self: *BingoBoard, num: u8) ?struct{row: u8, col: u8} {
+    fn findNumber(self: *const BingoBoard, num: u8) ?Pair {
         for (self.data) |row, m| {
-            for (row) |value, n| {
-                if (value == num) {
-                    return .{.row = m, .col = n};
+            for (row) |entry, n| {
+                if (entry.value == num) {
+                    // print("found value at {}, {}\n", .{m, n});
+                    return Pair{.row = @intCast(u8, m), .col = @intCast(u8, n)};
                 }
             }
         }
@@ -37,16 +47,38 @@ const BingoBoard = struct {
         return null;
     }
 
-    fn updateCounts(self: *BingoBoard, row: u8, col: u8) bool {
-        columnCounts[col] += 1;
-        rowCounts[row] += 1;
-        return columnCounts[col] == 5 or rowCounts[row] == 5;
+    fn mark(self: *BingoBoard, row: u8, col: u8) bool {
+        self.data[row][col].marked = true;
+        var n: u4 = 0;
+        var rowBingo = true;
+        var colBingo = true;
+        while (n < 5) : (n += 1) {
+            if (!self.data[row][n].marked) {
+                rowBingo = false;
+            }
+            if (!self.data[n][col].marked) {
+                colBingo = false;
+            }
+        }
+        return rowBingo or colBingo;
     }
 
-    fn printBoard(self: *BingoBoard) void {
+    fn unmarkedSum(self: *const BingoBoard) u32 {
+        var sum: u32 = 0;
+        for (self.data) |row| {
+            for (row) |entry| {
+                if (!entry.marked) sum += entry.value;
+            }
+        }
+        return sum;
+    }
+
+    fn printBoard(self: *const BingoBoard) void {
         for (self.data) |row| {
             for (row) |val| {
-                print("{} ", .{val});
+                const marked = if (val.marked) "x" else " ";
+                print("{}{s} ", .{val.value, marked});
+                // print("{} ", .{val});
             }
             print("\n", .{});
         }
@@ -54,7 +86,7 @@ const BingoBoard = struct {
 };
 
 fn part1(reader: std.fs.File.Reader) anyerror!u32 {
-    var buff: [1<<10]u8 = undefined;
+    var buff: [1<<20]u8 = undefined;
     var allocator = std.heap.FixedBufferAllocator.init(buff[0..]);
 
     var buffer: [512]u8 = undefined;
@@ -76,16 +108,27 @@ fn part1(reader: std.fs.File.Reader) anyerror!u32 {
     }
 
     var boardSlice = boardList.toOwnedSlice();
+    var lastNum: u8 = 0;
 
-    while (bingoVals.next()) |bingoStr| {
-        const bingoVal = std.fmt.parseInt(u8, bingoStr, 10);
+    const winningBoard: BingoBoard = outer: while (bingoVals.next()) |bingoStr| {
+        const bingoVal = try std.fmt.parseInt(u8, bingoStr, 10);
+        lastNum = bingoVal;
         // print("val: {}\n", .{bingoVal});
 
-        for (boardSlice) |board| {
-            board.printBoard();
+        for (boardSlice) |board, index| {
+            // board.printBoard();
+            // print("\n", .{});
+
+            if (board.findNumber(bingoVal)) |coords| {
+                const bingo = boardSlice[index].mark(coords.row, coords.col);
+                if (bingo) break :outer boardSlice[index];
+            }
         }
-    }
-    return 0;
+    } else unreachable;
+
+    winningBoard.printBoard();
+
+    return winningBoard.unmarkedSum() * lastNum;
 }
 
 fn part2(reader: std.fs.File.Reader) anyerror!u32 {
