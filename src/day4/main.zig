@@ -73,6 +73,14 @@ const BingoBoard = struct {
         return sum;
     }
 
+    fn makeDummy(self: *BingoBoard) void {
+        for (self.data) |row, m| {
+            for (row) |_, n| {
+                self.data[m][n] = BoardEntry{.value = 0};
+            }
+        }
+    }
+
     fn printBoard(self: *const BingoBoard) void {
         for (self.data) |row| {
             for (row) |val| {
@@ -132,7 +140,53 @@ fn part1(reader: std.fs.File.Reader) anyerror!u32 {
 }
 
 fn part2(reader: std.fs.File.Reader) anyerror!u32 {
-    return 0;
+        var buff: [1<<20]u8 = undefined;
+    var allocator = std.heap.FixedBufferAllocator.init(buff[0..]);
+
+    var buffer: [512]u8 = undefined;
+    const line = (try reader.readUntilDelimiterOrEof(buffer[0..], '\n')) orelse unreachable;
+    var bingoVals = std.mem.split(line, ",");
+
+    var boardList = std.ArrayList(BingoBoard).init(&allocator.allocator);
+    // defer boardList.deinit();
+
+    while (reader.readUntilDelimiterOrEof(buffer[0..], '\n')) |lineOption| {
+        if (lineOption) |_| {
+            var board = try BingoBoard.parseBoard(reader);
+            try boardList.append(board);
+            // board.printBoard();
+            // print("\n", .{});
+        } else break;
+    } else |err| {
+        unreachable;
+    }
+
+    var boardSlice = boardList.toOwnedSlice();
+    var lastNum: u8 = 0;
+
+    var winningBoard: BingoBoard = undefined;
+    while (bingoVals.next()) |bingoStr| {
+        const bingoVal = try std.fmt.parseInt(u8, bingoStr, 10);
+        // print("val: {}\n", .{bingoVal});
+
+        for (boardSlice) |board, index| {
+            // board.printBoard();
+            // print("\n", .{});
+
+            if (board.findNumber(bingoVal)) |coords| {
+                const bingo = boardSlice[index].mark(coords.row, coords.col);
+                if (bingo) {
+                    winningBoard = boardSlice[index];
+                    lastNum = bingoVal;
+                    boardSlice[index].makeDummy();
+                }
+            }
+        }
+    }
+
+    winningBoard.printBoard();
+
+    return winningBoard.unmarkedSum() * lastNum;
 }
 
 pub fn main() anyerror!void {
